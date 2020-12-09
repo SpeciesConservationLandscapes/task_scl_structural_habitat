@@ -5,8 +5,11 @@ from datetime import datetime, timezone
 from task_base import SCLTask
 
 
-class str_hab(SCLTask):
+class SCLStructruralHabitat(SCLTask):
     scale = 300
+    BIOME_ZONE_LABEL = "Biome_zone"
+    ELEV_ZONE_LABEL = "elev_zone"
+    LC_VALUE_LABEL = "lc_value"
     inputs = {
         "land_cover": {
             "ee_type": SCLTask.IMAGECOLLECTION,
@@ -23,9 +26,12 @@ class str_hab(SCLTask):
             "ee_path": "projects/SCL/v1/Panthera_tigris/zones",
             "static": True,
         },
+        "lc_elev_reclass": {
+            "ee_type": SCLTask.FEATURECOLLECTION,
+            "ee_path": "projects/SCL/v1/Panthera_tigris/source/landcover_reclass_lookup/lc_elev_reclass_table",
+            "static": True,
+        },
     }
-
-
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -34,20 +40,42 @@ class str_hab(SCLTask):
         )
         self.elevation = ee.Image(self.inputs["elevation"]["ee_path"])
         self.zones = ee.FeatureCollection(self.inputs["zones"]["ee_path"])
-        self.set_aoi_from_ee(self.inputs["probability"]["ee_path"])
-
+        self.lc_elev_reclass = ee.FeatureCollection(
+            self.inputs["lc_elev_reclass"]["ee_path"]
+        )
 
     def calc(self):
 
-        print(land_cover)
-        exit()
+        zone_numbers = self.zones.aggregate_histogram(self.BIOME_ZONE_LABEL).keys()
+        lc_val = self.lc_elev_reclass.aggregate_array(self.LC_VALUE_LABEL)
 
-        # export_path = "scl_poly/{}/scl_polys".format(self.taskdate)
-        #
-        # self.export_fc_ee(scl_polys, export_path)
+        zones_img = self.zones.reduceToImage(
+            properties=[self.BIOME_ZONE_LABEL], reducer=ee.Reducer.mode()
+        ).rename(self.BIOME_ZONE_LABEL)
 
-    def check_inputs(self):
-        super().check_inputs()
+        def str_hab_by_zone(li):
+            zone_string = ee.String(li)
+            zone_number = ee.Number.parse(li)
+            column = ee.String(self.ELEV_ZONE_LABEL).cat(zone_string)
+            elev_zone = self.lc_elev_reclass.aggregate_array(column)
+            reclass_img = (
+                self.elevation.lte(self.land_cover.remap(lc_val, elev_zone))
+                .updateMask(zones_img.eq(zone_number))
+                .selfMask()
+            )
+            return reclass_img
+
+        structural_habitat = (
+            ee.ImageCollection(zone_numbers.map(str_hab_by_zone))
+            .mosaic()
+            .rename("str_hab")
+        )
+
+        self.export_image_ee(structural_habitat, "structural_habitat")
+
+
+def check_inputs(self):
+    super().check_inputs()
 
 
 if __name__ == "__main__":
@@ -56,5 +84,5 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--species", default="Panthera_tigris")
     parser.add_argument("--scenario", default=SCLTask.CANONICAL)
     options = parser.parse_args()
-    sclstats_task = str_hab(**vars(options))
-    sclstats_task.run()
+    sclstrhab_task = SCLStructruralHabitat(**vars(options))
+    sclstrhab_task.run()
