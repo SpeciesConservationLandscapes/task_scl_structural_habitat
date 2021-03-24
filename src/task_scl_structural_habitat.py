@@ -33,6 +33,11 @@ class SCLStructruralHabitat(SCLTask):
         },
     }
 
+    thresholds = {
+        "elevation_min_limit": 0,
+        "elevation_max_limit": 3350,
+    }
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.land_cover, _ = self.get_most_recent_image(
@@ -55,12 +60,16 @@ class SCLStructruralHabitat(SCLTask):
         ).rename(self.BIOME_ZONE_LABEL)
 
         def str_hab_by_zone(li):
+            elev_limit = self.elevation.gte(self.thresholds["elevation_min_limit"]).And(
+                self.elevation.lte(self.thresholds["elevation_max_limit"])
+            )
             zone_string = ee.String(li)
             zone_number = ee.Number.parse(li)
             column = ee.String(self.ELEV_ZONE_LABEL).cat(zone_string)
             elev_zone = self.lc_elev_reclass.aggregate_array(column)
             reclass_img = (
-                self.elevation.lte(self.land_cover.remap(lc_val, elev_zone))
+                self.elevation.updateMask(elev_limit)
+                .lte(self.land_cover.remap(lc_val, elev_zone))
                 .updateMask(zones_img.eq(zone_number))
                 .selfMask()
             )
