@@ -14,11 +14,6 @@ class SCLStructruralHabitat(SCLTask):
             "ee_path": "projects/HII/v1/source/lc/ESACCI-LC-L4-LCCS-Map-300m-P1Y-1992_2015-v207",
             "maxage": 5,
         },
-        "land_cover_modis": {
-            "ee_type": SCLTask.IMAGECOLLECTION,
-            "ee_path": "MODIS/006/MCD12Q1",
-            "maxage": 2,
-        },
         "elevation": {
             "ee_type": SCLTask.IMAGECOLLECTION,
             "ee_path": "JAXA/ALOS/AW3D30/V3_2",
@@ -34,11 +29,6 @@ class SCLStructruralHabitat(SCLTask):
             "ee_path": "projects/SCL/v1/Panthera_tigris/landcover_reclass_lookup/lc_elev_reclass_esa",
             "static": True,
         },
-        "lc_elev_reclass_modis": {
-            "ee_type": SCLTask.FEATURECOLLECTION,
-            "ee_path": "projects/SCL/v1/Panthera_tigris/landcover_reclass_lookup/lc_elev_reclass_modis",
-            "static": True,
-        },
     }
 
     thresholds = {
@@ -51,9 +41,6 @@ class SCLStructruralHabitat(SCLTask):
         self.land_cover_esa, _ = self.get_most_recent_image(
             ee.ImageCollection(self.inputs["land_cover_esa"]["ee_path"])
         )
-        self.land_cover_modis, _ = self.get_most_recent_image(
-            ee.ImageCollection(self.inputs["land_cover_modis"]["ee_path"])
-        )
         self.elevation = (
             ee.ImageCollection(self.inputs["elevation"]["ee_path"]).select(0).mosaic()
         )
@@ -61,14 +48,10 @@ class SCLStructruralHabitat(SCLTask):
         self.lc_elev_reclass_esa = ee.FeatureCollection(
             self.inputs["lc_elev_reclass_esa"]["ee_path"]
         )
-        self.lc_elev_reclass_modis = ee.FeatureCollection(
-            self.inputs["lc_elev_reclass_modis"]["ee_path"]
-        )
 
     def calc(self):
         zone_numbers = self.zones.aggregate_histogram(self.BIOME_ZONE_LABEL).keys()
         lc_val_esa = self.lc_elev_reclass_esa.aggregate_array(self.LC_VALUE_LABEL)
-        lc_val_modis = self.lc_elev_reclass_modis.aggregate_array(self.LC_VALUE_LABEL)
         zones_img = self.zones.reduceToImage(
             properties=[self.BIOME_ZONE_LABEL], reducer=ee.Reducer.mode()
         ).rename(self.BIOME_ZONE_LABEL)
@@ -90,17 +73,10 @@ class SCLStructruralHabitat(SCLTask):
             zone_number = ee.Number.parse(li)
             column = ee.String(self.ELEV_ZONE_LABEL).cat(zone_string)
             elev_zone_esa = self.lc_elev_reclass_esa.aggregate_array(column)
-            elev_zone_modis = self.lc_elev_reclass_modis.aggregate_array(column)
             reclass_img_esa = landcover_reclass(
                 self.land_cover_esa, lc_val_esa, elev_zone_esa, zone_number
             )
-            reclass_img_modis = landcover_reclass(
-                self.land_cover_modis.select(0),
-                lc_val_modis,
-                elev_zone_modis,
-                zone_number,
-            )
-            return reclass_img_modis.gt(0).And(reclass_img_esa.gt(0)).selfMask()
+            return reclass_img_esa.gt(0).selfMask()
 
         structural_habitat = (
             ee.ImageCollection(zone_numbers.map(str_hab_by_zone))
