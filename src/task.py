@@ -1,7 +1,5 @@
 import argparse
 import ee
-import time
-from datetime import datetime, timezone
 from task_base import SCLTask
 
 
@@ -14,12 +12,12 @@ class SCLStructruralHabitat(SCLTask):
         "land_cover_esa": {
             "ee_type": SCLTask.IMAGECOLLECTION,
             "ee_path": "projects/HII/v1/source/lc/ESACCI-LC-L4-LCCS-Map-300m-P1Y-1992_2015-v207",
-            "maxage": 5,  # until full image collection of structural habitat
+            "maxage": 5,
         },
         "land_cover_modis": {
             "ee_type": SCLTask.IMAGECOLLECTION,
             "ee_path": "MODIS/006/MCD12Q1",
-            "maxage": 2,  # until full image collection of structural habitat
+            "maxage": 2,
         },
         "elevation": {
             "ee_type": SCLTask.IMAGECOLLECTION,
@@ -57,9 +55,7 @@ class SCLStructruralHabitat(SCLTask):
             ee.ImageCollection(self.inputs["land_cover_modis"]["ee_path"])
         )
         self.elevation = (
-            ee.ImageCollection(self.inputs["elevation"]["ee_path"])
-            .select(0)
-            .mosaic()
+            ee.ImageCollection(self.inputs["elevation"]["ee_path"]).select(0).mosaic()
         )
         self.zones = ee.FeatureCollection(self.inputs["zones"]["ee_path"])
         self.lc_elev_reclass_esa = ee.FeatureCollection(
@@ -70,45 +66,39 @@ class SCLStructruralHabitat(SCLTask):
         )
 
     def calc(self):
-        zone_numbers = self.zones.aggregate_histogram(
-            self.BIOME_ZONE_LABEL
-        ).keys()
-        lc_val_esa = self.lc_elev_reclass_esa.aggregate_array(
-            self.LC_VALUE_LABEL
-        )
-        lc_val_modis = self.lc_elev_reclass_modis.aggregate_array(
-            self.LC_VALUE_LABEL
-        )
-
+        zone_numbers = self.zones.aggregate_histogram(self.BIOME_ZONE_LABEL).keys()
+        lc_val_esa = self.lc_elev_reclass_esa.aggregate_array(self.LC_VALUE_LABEL)
+        lc_val_modis = self.lc_elev_reclass_modis.aggregate_array(self.LC_VALUE_LABEL)
         zones_img = self.zones.reduceToImage(
             properties=[self.BIOME_ZONE_LABEL], reducer=ee.Reducer.mode()
         ).rename(self.BIOME_ZONE_LABEL)
+        elev_limit = self.elevation.gte(self.thresholds["elevation_min_limit"]).And(
+            self.elevation.lte(self.thresholds["elevation_max_limit"])
+        )
+
+        def landcover_reclass(lc, lc_val, elev_zone, zonenumber):
+            reclass_lc = (
+                self.elevation.updateMask(elev_limit)
+                .lte(lc.remap(lc_val, elev_zone))
+                .updateMask(zones_img.eq(zonenumber))
+                .selfMask()
+            )
+            return reclass_lc
 
         def str_hab_by_zone(li):
-            elev_limit = self.elevation.gte(
-                self.thresholds["elevation_min_limit"]
-            ).And(self.elevation.lte(self.thresholds["elevation_max_limit"]))
             zone_string = ee.String(li)
             zone_number = ee.Number.parse(li)
             column = ee.String(self.ELEV_ZONE_LABEL).cat(zone_string)
             elev_zone_esa = self.lc_elev_reclass_esa.aggregate_array(column)
             elev_zone_modis = self.lc_elev_reclass_modis.aggregate_array(column)
-            reclass_img_esa = (
-                self.elevation.updateMask(elev_limit)
-                .lte(self.land_cover_esa.remap(lc_val_esa, elev_zone_esa))
-                .updateMask(zones_img.eq(zone_number))
-                .selfMask()
+            reclass_img_esa = landcover_reclass(
+                self.land_cover_esa, lc_val_esa, elev_zone_esa, zone_number
             )
-
-            reclass_img_modis = (
-                self.elevation.updateMask(elev_limit)
-                .lte(
-                    self.land_cover_modis.select(0).remap(
-                        lc_val_modis, elev_zone_modis
-                    )
-                )
-                .updateMask(zones_img.eq(zone_number))
-                .selfMask()
+            reclass_img_modis = landcover_reclass(
+                self.land_cover_modis.select(0),
+                lc_val_modis,
+                elev_zone_modis,
+                zone_number,
             )
             return reclass_img_modis.gt(0).And(reclass_img_esa.gt(0)).selfMask()
 
@@ -120,9 +110,8 @@ class SCLStructruralHabitat(SCLTask):
 
         self.export_image_ee(structural_habitat, "structural_habitat")
 
-
-def check_inputs(self):
-    super().check_inputs()
+    def check_inputs(self):
+        super().check_inputs()
 
 
 if __name__ == "__main__":
