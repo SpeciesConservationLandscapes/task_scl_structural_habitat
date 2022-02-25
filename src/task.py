@@ -1,19 +1,16 @@
 import argparse
 import ee
 from task_base import SCLTask
+from parameters import *
+
+
+def reclass_list_to_fc(dictionary):
+    return ee.Feature(None, dictionary)
 
 
 class SCLStructruralHabitat(SCLTask):
     scale = 300
-    BIOME_ZONE_LABEL = "Zone"
-    ELEV_ZONE_LABEL = "elev_zone"
-    LC_VALUE_LABEL = "lc_value"
     inputs = {
-        "land_cover_esa": {
-            "ee_type": SCLTask.IMAGECOLLECTION,
-            "ee_path": "projects/HII/v1/source/lc/ESACCI-LC-L4-LCCS-Map-300m-P1Y-1992_2015-v207",
-            "maxage": 5,
-        },
         "elevation": {
             "ee_type": SCLTask.IMAGECOLLECTION,
             "ee_path": "JAXA/ALOS/AW3D30/V3_2",
@@ -24,16 +21,23 @@ class SCLStructruralHabitat(SCLTask):
             "ee_path": "projects/SCL/v1/Panthera_tigris/zones",
             "static": True,
         },
-        "lc_elev_reclass_esa": {
-            "ee_type": SCLTask.FEATURECOLLECTION,
-            "ee_path": "projects/SCL/v1/Panthera_tigris/landcover_reclass_lookup/lc_elev_reclass_esa",
-            "static": True,
+        "land_cover_esa": {
+            "ee_type": SCLTask.IMAGECOLLECTION,
+            "ee_path": "projects/HII/v1/source/lc/ESACCI-LC-L4-LCCS-Map-300m-P1Y-1992_2015-v207",
+            "maxage": 5,
+        },
+        "forest_height": {
+            "ee_type": SCLTask.IMAGECOLLECTION,
+            "ee_path": "projects/SCL/v1/Panthera_tigris/source/Hansen_Forest_Height",
+            "maxage": 5,
         },
     }
 
     thresholds = {
         "elevation_min_limit": 0,
         "elevation_max_limit": 3350,
+        "forest_height_height_threshold": 5,
+        "forest_height_cover_threshold": 75,
     }
 
     def __init__(self, *args, **kwargs):
@@ -41,45 +45,74 @@ class SCLStructruralHabitat(SCLTask):
         self.land_cover_esa, _ = self.get_most_recent_image(
             ee.ImageCollection(self.inputs["land_cover_esa"]["ee_path"])
         )
+        self.forest_height, _ = self.get_most_recent_image(
+            ee.ImageCollection(self.inputs["forest_height"]["ee_path"])
+        )
         self.elevation = (
             ee.ImageCollection(self.inputs["elevation"]["ee_path"]).select(0).mosaic()
         )
         self.zones = ee.FeatureCollection(self.inputs["zones"]["ee_path"])
-        self.lc_elev_reclass_esa = ee.FeatureCollection(
-            self.inputs["lc_elev_reclass_esa"]["ee_path"]
-        )
+        self.zone_numbers = self.zones.aggregate_histogram(BIOME_ZONE_LABEL).keys()
+        self.zones_image = self.zones.reduceToImage(
+            properties=[BIOME_ZONE_LABEL], reducer=ee.Reducer.mode()
+        ).rename(BIOME_ZONE_LABEL)
+        self.reclass_table = ee.FeatureCollection(
+            ee.List(lc_elev_reclass_esa).map(reclass_list_to_fc)
+        ).filter(ee.Filter.eq(INCLUDE_CLASS, 1))
 
-    def calc(self):
-        zone_numbers = self.zones.aggregate_histogram(self.BIOME_ZONE_LABEL).keys()
-        lc_val_esa = self.lc_elev_reclass_esa.aggregate_array(self.LC_VALUE_LABEL)
-        zones_img = self.zones.reduceToImage(
-            properties=[self.BIOME_ZONE_LABEL], reducer=ee.Reducer.mode()
-        ).rename(self.BIOME_ZONE_LABEL)
+    def landcover_reclass(self, lc_val, elev_zone, zone):
         elev_limit = self.elevation.gte(self.thresholds["elevation_min_limit"]).And(
             self.elevation.lte(self.thresholds["elevation_max_limit"])
         )
+        elevation_mask = self.elevation.updateMask(elev_limit)
+        return (
+            elevation_mask.lte(self.land_cover_esa.remap(lc_val, elev_zone))
+            .updateMask(self.zones_image.eq(zone))
+            .selfMask()
+        )
 
-        def landcover_reclass(lc, lc_val, elev_zone, zonenumber):
-            reclass_lc = (
-                self.elevation.updateMask(elev_limit)
-                .lte(lc.remap(lc_val, elev_zone))
-                .updateMask(zones_img.eq(zonenumber))
-                .selfMask()
-            )
-            return reclass_lc
+    def calc(self):
+        lc_height = self.reclass_table.filter(ee.Filter.eq(INCLUDE_HEIGHT, 1))
+        lc_height_vals = lc_height.aggregate_array(LC_VALUE_LABEL)
+        lc_no_height = self.reclass_table.filter(ee.Filter.eq(INCLUDE_HEIGHT, 0))
+        lc_no_height_vals = lc_no_height.aggregate_array(LC_VALUE_LABEL)
 
-        def str_hab_by_zone(li):
-            zone_string = ee.String(li)
-            zone_number = ee.Number.parse(li)
-            column = ee.String(self.ELEV_ZONE_LABEL).cat(zone_string)
-            elev_zone_esa = self.lc_elev_reclass_esa.aggregate_array(column)
-            reclass_img_esa = landcover_reclass(
-                self.land_cover_esa, lc_val_esa, elev_zone_esa, zone_number
+        forest_height_mask = (
+            self.forest_height.updateMask(self.watermask)
+            .gte(self.thresholds["forest_height_height_threshold"])
+            .reduceResolution(reducer=ee.Reducer.mean(), maxPixels=125)
+            .reproject(scale=self.scale, crs=self.crs)
+            .gte(self.thresholds["forest_height_cover_threshold"] / 100)
+        )
+
+        def str_hab_by_zone(zone):
+            zone_string = ee.String(zone)
+            zone_number = ee.Number.parse(zone)
+            column = ee.String(ELEV_ZONE_LABEL).cat(zone_string)
+            elev_zone_esa_no_height = lc_no_height.aggregate_array(column)
+            elev_zone_esa_height = lc_height.aggregate_array(column)
+
+            reclass_img_esa_no_height = self.landcover_reclass(
+                lc_no_height_vals, elev_zone_esa_no_height, zone_number
             )
-            return reclass_img_esa.gt(0).selfMask()
+            reclass_img_esa_height = self.landcover_reclass(
+                lc_height_vals, elev_zone_esa_height, zone_number
+            ).updateMask(forest_height_mask)
+
+            str_hab_image = ee.Image(
+                ee.Algorithms.If(
+                    lc_no_height_vals.length().eq(0),
+                    reclass_img_esa_height,
+                    ee.ImageCollection(
+                        [reclass_img_esa_no_height, reclass_img_esa_no_height]
+                    ).reduce(ee.Reducer.max()),
+                )
+            )
+
+            return str_hab_image.gt(0).selfMask()
 
         structural_habitat = (
-            ee.ImageCollection(zone_numbers.map(str_hab_by_zone))
+            ee.ImageCollection(self.zone_numbers.map(str_hab_by_zone))
             .mosaic()
             .rename("str_hab")
         )
