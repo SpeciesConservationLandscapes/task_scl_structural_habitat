@@ -1,3 +1,9 @@
+BIOME_ZONE_LABEL = "Zone"
+ELEV_ZONE_LABEL = "elev_zone"
+LC_VALUE_LABEL = "lc_value"
+INCLUDE_CLASS = "include_class"
+INCLUDE_HEIGHT = "include_height"
+
 lc_elev_reclass_esa = [
     {
         "label": "No Data",
