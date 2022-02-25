@@ -9,6 +9,7 @@ def reclass_list_to_fc(dictionary):
 
 
 class SCLStructruralHabitat(SCLTask):
+    scale = 300
     inputs = {
         "elevation": {
             "ee_type": SCLTask.IMAGECOLLECTION,
@@ -36,7 +37,7 @@ class SCLStructruralHabitat(SCLTask):
         "elevation_min_limit": 0,
         "elevation_max_limit": 3350,
         "forest_height_height_threshold": 5,
-        "forest_height_cover_threshold": 50,
+        "forest_height_cover_threshold": 75,
     }
 
     def __init__(self, *args, **kwargs):
@@ -59,7 +60,7 @@ class SCLStructruralHabitat(SCLTask):
             ee.List(lc_elev_reclass_esa).map(reclass_list_to_fc)
         ).filter(ee.Filter.eq(INCLUDE_CLASS, 1))
 
-    def landcover_reclass(self, lc_val, elev_zone, zone, test_height):
+    def landcover_reclass(self, lc_val, elev_zone, zone):
         elev_limit = self.elevation.gte(self.thresholds["elevation_min_limit"]).And(
             self.elevation.lte(self.thresholds["elevation_max_limit"])
         )

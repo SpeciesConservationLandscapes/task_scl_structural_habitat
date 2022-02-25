@@ -17,23 +17,23 @@ lc_elev_reclass_esa = [
     },
     {
         "label": "Cropland, rainfed",
-        "include_class": 1,
+        "include_class": 0,
         "lc_value": 10,
         "elev_zone1": 3350,
         "elev_zone2": 3350,
         "elev_zone3": 1000,
         "elev_zone4": 3350,
-        "include_height": 1,
+        "include_height": 0,
     },
     {
         "label": "Herbaceous cover",
         "lc_value": 11,
-        "include_class": 1,
+        "include_class": 0,
         "elev_zone1": 3350,
         "elev_zone2": 3350,
         "elev_zone3": 1000,
         "elev_zone4": 3350,
-        "include_height": 1,
+        "include_height": 0,
     },
     {
         "label": "Tree or shrub cover",
@@ -47,13 +47,13 @@ lc_elev_reclass_esa = [
     },
     {
         "label": "Cropland, irrigated or post‐flooding",
-        "include_class": 1,
+        "include_class": 0,
         "lc_value": 20,
         "elev_zone1": 3350,
         "elev_zone2": 3350,
         "elev_zone3": 1000,
         "elev_zone4": 3350,
-        "include_height": 1,
+        "include_height": 0,
     },
     {
         "label": "Mosaic cropland (>50%) / natural vegetation (tree, shrub, herbaceous cover) (<50%)",
@@ -83,7 +83,7 @@ lc_elev_reclass_esa = [
         "elev_zone2": 3350,
         "elev_zone3": 1000,
         "elev_zone4": 3350,
-        "include_height": 1,
+        "include_height": 0,
     },
     {
         "label": "Tree cover, broadleaved, deciduous, closed to open (>15%)",
@@ -93,7 +93,7 @@ lc_elev_reclass_esa = [
         "elev_zone2": 3350,
         "elev_zone3": 1000,
         "elev_zone4": 3350,
-        "include_height": 1,
+        "include_height": 0,
     },
     {
         "label": "Tree cover, broadleaved, deciduous, closed (>40%)",
@@ -103,7 +103,7 @@ lc_elev_reclass_esa = [
         "elev_zone2": 3350,
         "elev_zone3": 1000,
         "elev_zone4": 3350,
-        "include_height": 1,
+        "include_height": 0,
     },
     {
         "label": "Tree cover, broadleaved, deciduous, open (15‐40%)",
@@ -113,7 +113,7 @@ lc_elev_reclass_esa = [
         "elev_zone2": 3350,
         "elev_zone3": 1000,
         "elev_zone4": 3350,
-        "include_height": 1,
+        "include_height": 0,
     },
     {
         "label": "Tree cover, needleleaved, evergreen, closed to open (>15%)",
@@ -123,7 +123,7 @@ lc_elev_reclass_esa = [
         "elev_zone2": 3350,
         "elev_zone3": 1000,
         "elev_zone4": 3350,
-        "include_height": 1,
+        "include_height": 0,
     },
     {
         "label": "Tree cover, needleleaved, evergreen, closed (>40%)",
@@ -133,7 +133,7 @@ lc_elev_reclass_esa = [
         "elev_zone2": 3350,
         "elev_zone3": 1000,
         "elev_zone4": 3350,
-        "include_height": 1,
+        "include_height": 0,
     },
     {
         "label": "Tree cover, needleleaved, evergreen, open (15‐40%)",
@@ -143,7 +143,7 @@ lc_elev_reclass_esa = [
         "elev_zone2": 3350,
         "elev_zone3": 1000,
         "elev_zone4": 3350,
-        "include_height": 1,
+        "include_height": 0,
     },
     {
         "label": "Tree cover, needleleaved, deciduous, closed to open (>15%)",
@@ -153,7 +153,7 @@ lc_elev_reclass_esa = [
         "elev_zone2": 3350,
         "elev_zone3": 1000,
         "elev_zone4": 3350,
-        "include_height": 1,
+        "include_height": 0,
     },
     {
         "label": "Tree cover, needleleaved, deciduous, closed (>40%)",
@@ -163,7 +163,7 @@ lc_elev_reclass_esa = [
         "elev_zone2": 3350,
         "elev_zone3": 1000,
         "elev_zone4": 3350,
-        "include_height": 1,
+        "include_height": 0,
     },
     {
         "label": "Tree cover, needleleaved, deciduous, open (15‐40%)",
@@ -173,7 +173,7 @@ lc_elev_reclass_esa = [
         "elev_zone2": 3350,
         "elev_zone3": 1000,
         "elev_zone4": 3350,
-        "include_height": 1,
+        "include_height": 0,
     },
     {
         "label": "Tree cover, mixed leaf type (broadleaved and needleleaved)",
@@ -183,7 +183,7 @@ lc_elev_reclass_esa = [
         "elev_zone2": 3350,
         "elev_zone3": 1000,
         "elev_zone4": 3350,
-        "include_height": 1,
+        "include_height": 0,
     },
     {
         "label": "Mosaic tree and shrub (>50%) / herbaceous cover (<50%)",
@@ -193,7 +193,7 @@ lc_elev_reclass_esa = [
         "elev_zone2": 3350,
         "elev_zone3": 1000,
         "elev_zone4": 3350,
-        "include_height": 1,
+        "include_height": 0,
     },
     {
         "label": "Mosaic herbaceous cover (>50%) / tree and shrub (<50%)",
@@ -237,7 +237,7 @@ lc_elev_reclass_esa = [
     },
     {
         "label": "Grassland",
-        "include_class": 1,
+        "include_class": 0,
         "lc_value": 130,
         "elev_zone1": 3350,
         "elev_zone2": 3350,
@@ -277,13 +277,13 @@ lc_elev_reclass_esa = [
     },
     {
         "label": "Sparse shrub (<15%)",
-        "include_class": 1,
+        "include_class": 0,
         "lc_value": 152,
         "elev_zone1": 3350,
         "elev_zone2": 3350,
         "elev_zone3": 1000,
         "elev_zone4": 3350,
-        "include_height": 1,
+        "include_height": 0,
     },
     {
         "label": "Sparse herbaceous cover (<15%)",
@@ -303,7 +303,7 @@ lc_elev_reclass_esa = [
         "elev_zone2": 3350,
         "elev_zone3": 1000,
         "elev_zone4": 3350,
-        "include_height": 1,
+        "include_height": 0,
     },
     {
         "label": "Tree cover, flooded, saline water",
@@ -313,7 +313,7 @@ lc_elev_reclass_esa = [
         "elev_zone2": 3350,
         "elev_zone3": 1000,
         "elev_zone4": 3350,
-        "include_height": 1,
+        "include_height": 0,
     },
     {
         "label": "Shrub or herbaceous cover, flooded, fresh/saline/brakish water",
@@ -323,7 +323,7 @@ lc_elev_reclass_esa = [
         "elev_zone2": 3350,
         "elev_zone3": 1000,
         "elev_zone4": 3350,
-        "include_height": 1,
+        "include_height": 0,
     },
     {
         "label": "Urban areas",
