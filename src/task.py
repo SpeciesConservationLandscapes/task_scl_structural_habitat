@@ -34,8 +34,6 @@ class SCLStructruralHabitat(SCLTask):
     }
 
     thresholds = {
-        "elevation_min_limit": 0,
-        "elevation_max_limit": 3350,
         "forest_height_height_threshold": 5,
         "forest_height_cover_threshold": 75,
     }
@@ -61,12 +59,8 @@ class SCLStructruralHabitat(SCLTask):
         ).filter(ee.Filter.eq(INCLUDE_CLASS, 1))
 
     def landcover_reclass(self, lc_val, elev_zone, zone):
-        elev_limit = self.elevation.gte(self.thresholds["elevation_min_limit"]).And(
-            self.elevation.lte(self.thresholds["elevation_max_limit"])
-        )
-        elevation_mask = self.elevation.updateMask(elev_limit)
         return (
-            elevation_mask.lte(self.land_cover_esa.remap(lc_val, elev_zone))
+            self.elevation.lte(self.land_cover_esa.remap(lc_val, elev_zone))
             .updateMask(self.zones_image.eq(zone))
             .selfMask()
         )
