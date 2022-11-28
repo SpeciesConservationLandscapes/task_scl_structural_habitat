@@ -23,7 +23,7 @@ class SCLStructruralHabitat(SCLTask):
         },
         "land_cover_esa": {
             "ee_type": SCLTask.IMAGECOLLECTION,
-            "ee_path": "projects/HII/v1/source/lc/ESACCI-LC-L4-LCCS-Map-300m-P1Y-1992_2015-v207",
+            "ee_path": "ESA-CCI-LC-L4-LCCS",
             "maxage": 5,
         },
         "forest_height": {
