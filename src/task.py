@@ -18,7 +18,7 @@ class SCLStructruralHabitat(SCLTask):
         },
         "zones": {
             "ee_type": SCLTask.FEATURECOLLECTION,
-            "ee_path": "projects/SCL/v1/Panthera_tigris/zones",
+            "ee_path": "species_zones",
             "static": True,
         },
         "land_cover_esa": {
@@ -31,11 +31,6 @@ class SCLStructruralHabitat(SCLTask):
             "ee_path": "projects/SCL/v1/Panthera_tigris/source/Hansen_Forest_Height",
             "maxage": 5,
         },
-    }
-
-    thresholds = {
-        "forest_height_height_threshold": 5,
-        "forest_height_cover_threshold": 75,
     }
 
     def __init__(self, *args, **kwargs):
@@ -55,8 +50,14 @@ class SCLStructruralHabitat(SCLTask):
             properties=[BIOME_ZONE_LABEL], reducer=ee.Reducer.mode()
         ).rename(BIOME_ZONE_LABEL)
         self.reclass_table = ee.FeatureCollection(
-            ee.List(lc_elev_reclass_esa).map(reclass_list_to_fc)
+            ee.List(LC_ELEV_RECLASS_ESA[self.species]).map(reclass_list_to_fc)
         ).filter(ee.Filter.eq(INCLUDE_CLASS, 1))
+        self.height = HEIGHT[self.species]["INCLUDE"]
+        self.height_threshold = HEIGHT[self.species]["HEIGHT_THRESHOLD"]
+        self.height_cover_threshold = HEIGHT[self.species]["HEIGHT_COVER_THRESHOLD"]
+
+    def species_zones(self):
+        return f"projects/SCL/v1/{self.species}/zones"
 
     def landcover_reclass(self, lc_val, elev_zone, zone):
         return (
@@ -66,18 +67,20 @@ class SCLStructruralHabitat(SCLTask):
         )
 
     def calc(self):
+
         lc_height = self.reclass_table.filter(ee.Filter.eq(INCLUDE_HEIGHT, 1))
         lc_height_vals = lc_height.aggregate_array(LC_VALUE_LABEL)
         lc_no_height = self.reclass_table.filter(ee.Filter.eq(INCLUDE_HEIGHT, 0))
         lc_no_height_vals = lc_no_height.aggregate_array(LC_VALUE_LABEL)
 
-        forest_height_mask = (
-            self.forest_height.updateMask(self.watermask)
-            .gte(self.thresholds["forest_height_height_threshold"])
-            .reduceResolution(reducer=ee.Reducer.mean(), maxPixels=125)
-            .reproject(scale=self.scale, crs=self.crs)
-            .gte(self.thresholds["forest_height_cover_threshold"] / 100)
-        )
+        if self.height:
+            forest_height_mask = (
+                self.forest_height.updateMask(self.watermask)
+                .gte(self.height_threshold)
+                .reduceResolution(reducer=ee.Reducer.mean(), maxPixels=125)
+                .reproject(scale=self.scale, crs=self.crs)
+                .gte(self.height_cover_threshold / 100)
+            )
 
         def str_hab_by_zone(zone):
             zone_string = ee.String(zone)
@@ -89,19 +92,22 @@ class SCLStructruralHabitat(SCLTask):
             reclass_img_esa_no_height = self.landcover_reclass(
                 lc_no_height_vals, elev_zone_esa_no_height, zone_number
             )
-            reclass_img_esa_height = self.landcover_reclass(
-                lc_height_vals, elev_zone_esa_height, zone_number
-            ).updateMask(forest_height_mask)
+            if self.height:
+                reclass_img_esa_height = self.landcover_reclass(
+                    lc_height_vals, elev_zone_esa_height, zone_number
+                ).updateMask(forest_height_mask)
 
-            str_hab_image = ee.Image(
-                ee.Algorithms.If(
-                    lc_no_height_vals.length().eq(0),
-                    reclass_img_esa_height,
-                    ee.ImageCollection(
-                        [reclass_img_esa_no_height, reclass_img_esa_no_height]
-                    ).reduce(ee.Reducer.max()),
+                str_hab_image = ee.Image(
+                    ee.Algorithms.If(
+                        lc_no_height_vals.length().eq(0),
+                        reclass_img_esa_height,
+                        ee.ImageCollection(
+                            [reclass_img_esa_no_height, reclass_img_esa_no_height]
+                        ).reduce(ee.Reducer.max()),
+                    )
                 )
-            )
+            else:
+                str_hab_image = reclass_img_esa_no_height
 
             return str_hab_image.gt(0).selfMask()
 
