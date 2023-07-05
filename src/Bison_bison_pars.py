@@ -1,9 +1,9 @@
-BISON_BISON_HEIGHT = {
+HEIGHT = {
     "INCLUDE": False,
     "HEIGHT_THRESHOLD": None,
     "HEIGHT_COVER_THRESHOLD": None,
 }
-BISON_BISON_LC_RECLASS = [
+LC_RECLASS = [
     {
         "label": "No Data",
         "include_class": 0,

@@ -1,7 +1,15 @@
 import argparse
 import ee
 from task_base import SCLTask
-from parameters import *
+from parameters import (
+    BIOME_ZONE_LABEL,
+    ELEV_ZONE_LABEL,
+    LC_VALUE_LABEL,
+    INCLUDE_CLASS,
+    INCLUDE_HEIGHT,
+    HEIGHT,
+    LC_ELEV_RECLASS_ESA,
+)
 
 
 def reclass_list_to_fc(dictionary):
@@ -67,20 +75,10 @@ class SCLStructruralHabitat(SCLTask):
         )
 
     def calc(self):
-
         lc_height = self.reclass_table.filter(ee.Filter.eq(INCLUDE_HEIGHT, 1))
         lc_height_vals = lc_height.aggregate_array(LC_VALUE_LABEL)
         lc_no_height = self.reclass_table.filter(ee.Filter.eq(INCLUDE_HEIGHT, 0))
         lc_no_height_vals = lc_no_height.aggregate_array(LC_VALUE_LABEL)
-
-        if self.height:
-            forest_height_mask = (
-                self.forest_height.updateMask(self.watermask)
-                .gte(self.height_threshold)
-                .reduceResolution(reducer=ee.Reducer.mean(), maxPixels=125)
-                .reproject(scale=self.scale, crs=self.crs)
-                .gte(self.height_cover_threshold / 100)
-            )
 
         def str_hab_by_zone(zone):
             zone_string = ee.String(zone)
@@ -92,7 +90,15 @@ class SCLStructruralHabitat(SCLTask):
             reclass_img_esa_no_height = self.landcover_reclass(
                 lc_no_height_vals, elev_zone_esa_no_height, zone_number
             )
+
             if self.height:
+                forest_height_mask = (
+                    self.forest_height.updateMask(self.watermask)
+                    .gte(self.height_threshold)
+                    .reduceResolution(reducer=ee.Reducer.mean(), maxPixels=125)
+                    .reproject(scale=self.scale, crs=self.crs)
+                    .gte(self.height_cover_threshold / 100)
+                )
                 reclass_img_esa_height = self.landcover_reclass(
                     lc_height_vals, elev_zone_esa_height, zone_number
                 ).updateMask(forest_height_mask)
@@ -116,6 +122,8 @@ class SCLStructruralHabitat(SCLTask):
             .mosaic()
             .rename("str_hab")
         )
+        print(structural_habitat.getInfo())
+        exit()
 
         self.export_image_ee(structural_habitat, "structural_habitat")
 

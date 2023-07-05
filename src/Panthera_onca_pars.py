@@ -1,10 +1,10 @@
-PANTHERA_ONCA_HEIGHT = {
+HEIGHT = {
     "INCLUDE": False,
     "HEIGHT_THRESHOLD": None,
     "HEIGHT_COVER_THRESHOLD": None,
 }
 
-PANTHERA_ONCA_LC_RECLASS = [
+LC_RECLASS = [
     {
         "label": "No Data",
         "include_class": 0,

@@ -1,10 +1,10 @@
-PANTHERA_TIGRIS_HEIGHT = {
+HEIGHT = {
     "INCLUDE": True,
     "HEIGHT_THRESHOLD": 5,
     "HEIGHT_COVER_THRESHOLD": 75,
 }
 
-PANTHERA_TIGRIS_LC_RECLASS = [
+LC_RECLASS = [
     {
         "label": "No Data",
         "include_class": 0,

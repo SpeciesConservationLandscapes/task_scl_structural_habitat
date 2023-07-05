@@ -1,9 +1,9 @@
-PANTHERA_LEO_HEIGHT = {
+HEIGHT = {
     "INCLUDE": False,
     "HEIGHT_THRESHOLD": None,
     "HEIGHT_COVER_THRESHOLD": None,
 }
-PANTHERA_LEO_LC_RECLASS = [
+LC_RECLASS = [
     {
         "label": "No Data",
         "include_class": 0,
